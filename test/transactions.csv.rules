@@ -1,0 +1,8 @@
+skip 1
+
+fields date, note, amount, description
+date-format %Y-%m-%d
+currency £
+comment %note
+
+account1 assets:bank:checking

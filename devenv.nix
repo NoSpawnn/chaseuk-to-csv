@@ -2,7 +2,7 @@
 
 {
   # https://devenv.sh/packages/
-  packages = [ pkgs.hledger ];
+  packages = [ pkgs.hledger pkgs.ruff ];
 
   # https://devenv.sh/languages/
   languages.python = {

@@ -8,37 +8,53 @@ import csv
 PDF_HEADER_STR = "Date Transaction details Amount Balance"
 
 DATE_FMT = "%d %b %Y"
-TRANSACTION_LINES = 3 # title \n note \n amounts
-CSV_HEADER_FIELDS = ["date","note","amount","desc"]
+TRANSACTION_LINES = 3  # title \n note \n amounts
+CSV_HEADER_FIELDS = ["date", "note", "amount", "desc"]
 
 parser = argparse.ArgumentParser(
-                    prog='chase-to-csv',
-                    description='Convert Chase UK PDF statement to hledger-importable CSV')
+    prog="chase-to-csv",
+    description="Convert Chase UK PDF statement to hledger-importable CSV",
+)
 parser.add_argument("target_pdf")
 parser.add_argument("outcsv")
+parser.add_argument("--use-old-parsing", action="store_true")
 
 args = parser.parse_args()
 reader = PdfReader(args.target_pdf)
 pages = reader.pages
-
-outcsv = args.outcsv
 
 transactions = []
 start = None
 done = False
 failed = False
 for page_no, page in enumerate(pages):
-    if done or failed: break
+    if done or failed:
+        break
 
     lines = page.extract_text().splitlines()
     start = lines.index(PDF_HEADER_STR)
     if start == -1:
-        print(f"Didn't find header string on page {page_no+1}", file=sys.stderr)
+        print(f"Didn't find header string on page {page_no + 1}", file=sys.stderr)
         continue
+
+    # TODO: figure out when they changed this/auto-detect it.
+    #       it used to be that the opening -> closing bal
+    #       was at the end of the page
+    if args.use_old_parsing:
+        lines[:] = lines[
+            : next(
+                (
+                    i
+                    for i in range(len(lines) - 1, -1, -1)
+                    if "Account statement" in lines[i]
+                ),
+                len(lines),
+            )
+        ]
 
     skip = 2 if page_no == 0 else 1
 
-    for group in batched(lines[start+skip:], TRANSACTION_LINES):
+    for group in batched(lines[start + skip :], TRANSACTION_LINES):
         if group[0].startswith("Page"):
             continue
         if "Closing balance" in group[0]:
@@ -56,9 +72,16 @@ for page_no, page in enumerate(pages):
 
         desc = group[0][12:]
         note = group[1]
-        amount= group[2].split(" ")[0].replace("£", "")
+        amount = group[2].split(" ")[0].replace("£", "")
 
-        transactions.append({ "date": date.strftime("%Y-%m-%d"), "desc": desc, "note": note, "amount": amount })
+        transactions.append(
+            {
+                "date": date.strftime("%Y-%m-%d"),
+                "desc": desc,
+                "note": note,
+                "amount": amount,
+            }
+        )
 
 if start is None or start == -1:
     print("Didn't find a line matching '" + PDF_HEADER_STR + "'", file=sys.stderr)
@@ -67,7 +90,8 @@ if start is None or start == -1:
 if failed:
     exit(1)
 
-with open(outcsv, 'w', newline='') as csvfile:
+with open(args.outcsv, "w", newline="") as csvfile:
     writer = csv.DictWriter(csvfile, fieldnames=CSV_HEADER_FIELDS)
     writer.writeheader()
-    for t in transactions: writer.writerow(t)
+    for t in transactions:
+        writer.writerow(t)

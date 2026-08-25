@@ -19,7 +19,7 @@
           name = "run";
           runtimeInputs = [ pkgs.uv ];
           text = ''
-            exec uv run --with-requirements "$PWD/requirements.txt" "$PWD/main.py" "$@"
+            exec uv run --with-requirements "${./requirements.txt}" "${./main.py}" "$@"
           '';
         };
       });

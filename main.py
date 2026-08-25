@@ -15,10 +15,13 @@ parser = argparse.ArgumentParser(
                     prog='chase-to-csv',
                     description='Convert Chase UK PDF statement to hledger-importable CSV')
 parser.add_argument("target_pdf")
+parser.add_argument("outcsv")
 
 args = parser.parse_args()
 reader = PdfReader(args.target_pdf)
 pages = reader.pages
+
+outcsv = args.outcsv
 
 transactions = []
 start = None
@@ -64,7 +67,7 @@ if start is None or start == -1:
 if failed:
     exit(1)
 
-with open('transactions.csv', 'w', newline='') as csvfile:
+with open(outcsv, 'w', newline='') as csvfile:
     writer = csv.DictWriter(csvfile, fieldnames=CSV_HEADER_FIELDS)
     writer.writeheader()
     for t in transactions: writer.writerow(t)
